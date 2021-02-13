@@ -1,0 +1,99 @@
+# Modules used by project
+subprojects
+{
+	iw2d
+}
+
+# Files that make up project
+files
+{
+	[Source Code]
+	(source)
+	Main.cpp
+	game.cpp
+	game.h
+	Play.h
+}
+
+includepaths
+{
+	SplashFolder
+	icon
+}
+
+# Settings to configure depoyment project
+deployments
+{
+	name="Free Ball"
+	caption="Free Ball"
+	splashscreen = "SplashFolder"
+	splashscreen-use-all = 1
+	icon = "icon"
+}
+
+assets
+{
+	(icon)
+	icon.png
+	icon_1.png
+	icon_2.png
+	icon_3.png
+	icon_4.png
+
+	(SplashFolder)
+	SplashScreen.jpg
+	SplashScreen1.jpg
+	SplashScreen2.jpg
+	SplashScreen3.jpg
+	SplashScreen4.jpg
+	
+    (data)
+	background.png
+	
+	ball_matt.png
+	ball_steel.png
+	ball_titanium.png
+	ball_plastic.png
+	ball_rubber.png
+
+	plank.png
+	share.png
+	about.png
+	aboutwindow.png
+	setting.png
+	optionswindow.png
+	
+	name.png
+	resume.png
+	play.png
+	scores.png
+	score.png
+	newgame.png
+
+	music_off.png
+	track_a.png
+	track_b.png
+	track_c.png
+	title_music.png
+
+	highscore.png
+	
+	locked.png
+	title_ball.png
+	b_matt.png
+	b_steel.png
+	b_titanium.png
+	b_plastic.png
+	b_rubber.png
+	
+	bk_music.mp3
+	bk_music1.mp3
+	bk_music2.mp3
+
+	control.png
+	control_acc.png
+	control_touch.png
+
+	(data-ram/data-gles1, data)
+    iw2dstrings.group.bin
+}

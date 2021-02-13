@@ -1,0 +1,12 @@
+//Temp file created by AS Font Builder (User:  At: 12/31/13 14:49:15)
+//Command Line:
+//:  -fontdesc "0;-48;0;0;0;700;0;0;0;0;3;2;1;2;Segoe Print" 0 4 0  -pad 0 0 
+//:  -col #000000 -shadow 0 -spacing 4 -force16 0
+
+CIwGxFont
+{
+	utf8 1
+	image segoeprint36_black.tga
+	charmap " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ"
+
+}

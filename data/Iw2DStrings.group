@@ -1,0 +1,13 @@
+CIwResGroup
+{
+	name Iw2DStrings
+	"Fonts/segoeprint16.gxfont"
+	"Fonts/segoeprint26.gxfont"
+	"Fonts/segoeprint36.gxfont"
+
+	"Fonts/segoeprint26_black.gxfont"
+	"Fonts/segoeprint36_black.gxfont"
+
+	"Fonts/segoeprint26_aqua.gxfont"
+	"Fonts/segoeprint36_aqua.gxfont"
+}

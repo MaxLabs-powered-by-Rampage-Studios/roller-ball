@@ -1,0 +1,31 @@
+# This file is for configuration settings for your
+# application.
+#
+# The syntax is similar to windows .ini files ie
+#
+# [GroupName]
+# Setting = Value
+#
+# Which can be read by your application using
+#  e.g s3eConfigGetString("GroupName", "Setting", string)
+#
+# All settings must be documented in .config.txt files.
+# New settings specific to this application should be
+# documented in app.config.txt
+#
+# Some conditional operations are also permitted, see the
+# S3E documentation for details.
+
+[GL]
+PreCompileShaderBinaries=1
+
+[s3e]
+MemSize=20000000
+DispFixRot=Portrait
+SplashScreenMinTime=3000
+
+[2D]
+MaxBatch=2000
+
+[GX]
+DataCacheSize=50000
