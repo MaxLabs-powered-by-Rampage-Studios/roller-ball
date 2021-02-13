@@ -60,6 +60,7 @@ assets
 	share.png
 	about.png
 	aboutwindow.png
+	aboutwindow_details.png
 	setting.png
 	optionswindow.png
 	
@@ -93,6 +94,8 @@ assets
 	control.png
 	control_acc.png
 	control_touch.png
+
+	loading.png
 
 	(data-ram/data-gles1, data)
     iw2dstrings.group.bin

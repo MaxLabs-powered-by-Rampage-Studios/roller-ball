@@ -20,7 +20,7 @@
 PreCompileShaderBinaries=1
 
 [s3e]
-MemSize=20000000
+MemSize=30000000
 DispFixRot=Portrait
 SplashScreenMinTime=3000
 

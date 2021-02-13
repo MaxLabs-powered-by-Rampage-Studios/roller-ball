@@ -6,7 +6,7 @@
 #include "s3eOSExec.h"
 
 CIw2DFont *font,*dfont,*hfont;
-CIw2DImage *_name, *_bg,*_about,*_setting,*_option, *_about_content,*_share;
+CIw2DImage *_name, *_bg,*_about , *_about_details,*_setting,*_option, *_about_content,*_share, *_loading;
 CIw2DImage *_resume,*_play,*_scores,*_newgame, *_score;
 CIw2DImage *_music_off, *_music_a, *_music_b, *_music_c, *_title_music;
 CIw2DImage *_title_high;
@@ -28,11 +28,11 @@ char str[100];
 int page, over, i, j, z, resume, trans, ballsel, life, option, track, click, acc;
 int m_tran;
 CIwFVec2 barpos[6], b_size;
-bool iscaptured;
+bool iscaptured , isslide;
 
 int32 accX, lSmoothFactor, deltaX;
 
-float speed, time_scale, time_scale_ball, b_speed, bh_speed, x, score, highscore[3];
+float speed, time_scale, time_scale_ball, b_speed, bh_speed, x, score, highscore[3], slide , slide_add;
 
 CGame::CGame()
 	: m_Position((float)Iw2DGetSurfaceWidth()/2,0)
@@ -64,16 +64,19 @@ CGame::CGame()
 
 	_name = Iw2DCreateImage("name.png");
 	_bg = Iw2DCreateImage("background.png");
+	_loading = Iw2DCreateImage("loading.png");
 
 	Iw2DSurfaceClear(0xff000000);
 	Iw2DSetColour(0xffffffff);
 	Iw2DDrawImage(_bg,CIwFVec2(0.0f,0.0f),CIwFVec2((float)Iw2DGetSurfaceWidth(),(float)Iw2DGetSurfaceHeight()));
 	Iw2DDrawImage(_name,CIwFVec2((float)(Iw2DGetSurfaceWidth()/2-((float)Iw2DGetSurfaceWidth()*0.90f)/2),(float)(Iw2DGetSurfaceHeight()/6-((float)Iw2DGetSurfaceHeight()*(0.90f/3))/2)),CIwFVec2((float)Iw2DGetSurfaceWidth()*0.90f,(float)Iw2DGetSurfaceWidth()*(0.90f/3.12f)));
+	Iw2DDrawImage(_loading,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.60f/2,Iw2DGetSurfaceHeight()*0.50f-Iw2DGetSurfaceWidth()*0.60f*0.44f/2),CIwFVec2(Iw2DGetSurfaceWidth()*0.60f,Iw2DGetSurfaceWidth()*0.60f*0.44f));
 	Iw2DSurfaceShow();
 
 	_share = Iw2DCreateImage("share.png");
 	_about = Iw2DCreateImage("about.png");
 	_about_content = Iw2DCreateImage("aboutwindow.png");
+	_about_details = Iw2DCreateImage("aboutwindow_details.png");
 	_setting = Iw2DCreateImage("setting.png");
 	_option = Iw2DCreateImage("optionswindow.png");
 
@@ -128,6 +131,8 @@ CGame::CGame()
 
 	accX = 0;
 	lSmoothFactor = IW_GEOM_ONE / 4;
+	slide = 0;
+	slide_add = 0;
 
 	if(s3eSecureStorageGet(_store,sizeof(struct _save)) == S3E_RESULT_SUCCESS)
 	{
@@ -193,13 +198,14 @@ CGame::CGame()
 			highscore[i] = 1000;
 		}
 		page=0;
-		track=1;
+		track=3;
 		ballsel = 0;
 		click = 0;
-		acc = 0;
-		s3eAudioPlay("bk_music.mp3",0);
+		acc = 1;
+		s3eAudioPlay("bk_music2.mp3",0);
 		reset();
 	}
+	delete _loading;
 }
 
 
@@ -214,6 +220,7 @@ CGame::~CGame()
 	delete _share;
 	delete _about;
 	delete _about_content;
+	delete _about_details;
 	delete _setting;
 	delete _option;
 
@@ -329,7 +336,20 @@ void CGame::main_Page()
 		Iw2DDrawImage(_resume,CIwFVec2((float)Iw2DGetSurfaceWidth()/2-((float)Iw2DGetSurfaceWidth()*0.40f)/2,(float)Iw2DGetSurfaceHeight()/2+30),CIwFVec2((float)Iw2DGetSurfaceWidth()*0.40f,(float)Iw2DGetSurfaceWidth()*(0.40f/3.24f)));
 	}
 
-	if(option!=0)
+	if(option == -1 && j!=1)
+	{
+		if(j>1)
+		{
+			j--;
+			if(j == 1)
+			{
+				option = 0;
+			}
+			Iw2DSetColour(col[j-1]);
+			Iw2DDrawImage(_option,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()/2,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2),CIwFVec2((float)Iw2DGetSurfaceWidth(),Iw2DGetSurfaceWidth()*1.25f));
+		}
+	}
+	else if(option!=0)
 	{
 		if(j<32)
 		{
@@ -340,10 +360,11 @@ void CGame::main_Page()
 				case 1:
 					Iw2DDrawImage(_title_music,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.15f),CIwFVec2(Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*0.3f));
 					Iw2DDrawImage(_title_ball,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.35f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.4f),CIwFVec2(Iw2DGetSurfaceWidth()*0.35f,Iw2DGetSurfaceWidth()*0.35f*0.55f));
-					Iw2DDrawImage(_control,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f),CIwFVec2(Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*0.3f));
+					Iw2DDrawImage(_control,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f),CIwFVec2(Iw2DGetSurfaceWidth()*0.5f,Iw2DGetSurfaceWidth()*0.5f*0.3f));
 					break;
 				case 2:
-					Iw2DDrawImage(_about_content,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*0.7f*1.38f/2),CIwFVec2((float)Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*1.38f));
+					Iw2DDrawImage(_about_content,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*0.7f*1.38f/2),CIwFVec2((float)Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*0.76f));
+					Iw2DDrawImageRegion(_about_details,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*0.7f*1.38f/2+Iw2DGetSurfaceWidth()*0.7f*0.76f),CIwFVec2((float)Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*1.38f-Iw2DGetSurfaceWidth()*0.7f*0.76f),CIwFVec2(0,slide),CIwFVec2(516,317));
 					Iw2DDrawImage(_share,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.7f/2-Iw2DGetSurfaceWidth()*0.17f*0.35f,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2+Iw2DGetSurfaceWidth()*0.17f*0.2f),CIwFVec2(Iw2DGetSurfaceWidth()*0.17f,Iw2DGetSurfaceWidth()*0.17f));
 					break;
 				case 3:
@@ -362,15 +383,6 @@ void CGame::main_Page()
 		else
 		{
 			option_Win();
-		}
-	}
-	else if(j!=1)
-	{
-		if(j>1)
-		{
-			j--;
-			Iw2DSetColour(col[j-1]);
-			Iw2DDrawImage(_option,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()/2,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2),CIwFVec2((float)Iw2DGetSurfaceWidth(),Iw2DGetSurfaceWidth()*1.25f));
 		}
 	}
 } 
@@ -515,10 +527,11 @@ void CGame::option_Win()
 		case 1:
 			Iw2DDrawImage(_title_music,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.15f),CIwFVec2(Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*0.3f));
 			Iw2DDrawImage(_title_ball,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.35f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.4f),CIwFVec2(Iw2DGetSurfaceWidth()*0.35f,Iw2DGetSurfaceWidth()*0.35f*0.55f));
-			Iw2DDrawImage(_control,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f),CIwFVec2(Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*0.3f));
+			Iw2DDrawImage(_control,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f),CIwFVec2(Iw2DGetSurfaceWidth()*0.5f,Iw2DGetSurfaceWidth()*0.5f*0.3f));
 			break;
 		case 2:
-			Iw2DDrawImage(_about_content,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*0.7f*1.38f/2),CIwFVec2((float)Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*1.38f));
+			Iw2DDrawImage(_about_content,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*0.7f*1.38f/2),CIwFVec2((float)Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*0.76f));
+			Iw2DDrawImageRegion(_about_details,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*0.7f*1.38f/2+Iw2DGetSurfaceWidth()*0.7f*0.76f),CIwFVec2((float)Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*1.38f-Iw2DGetSurfaceWidth()*0.7f*0.76f),CIwFVec2(0,slide),CIwFVec2(516,317));
 			Iw2DDrawImage(_share,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.7f/2-Iw2DGetSurfaceWidth()*0.17f*0.35f,Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2+Iw2DGetSurfaceWidth()*0.17f*0.2f),CIwFVec2(Iw2DGetSurfaceWidth()*0.17f,Iw2DGetSurfaceWidth()*0.17f));
 			break;
 		case 4:
@@ -816,21 +829,21 @@ void CGame::option_Win()
 			}
 			break;
 		case 6:
-			Iw2DDrawImage(_control,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.2f),CIwFVec2(Iw2DGetSurfaceWidth()*0.7f,Iw2DGetSurfaceWidth()*0.7f*0.3f));
+			Iw2DDrawImage(_control,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.2f),CIwFVec2(Iw2DGetSurfaceWidth()*0.5f,Iw2DGetSurfaceWidth()*0.5f*0.3f));
 
 			if(acc == 0)
 			{
-				Iw2DSetColour(0xff0000ff);
-				Iw2DDrawImage(_control_touch,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.4f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.5f),CIwFVec2(Iw2DGetSurfaceWidth()*0.4f,Iw2DGetSurfaceWidth()*0.4f*0.3f));
 				Iw2DSetColour(0xffffffff);
-				Iw2DDrawImage(_control_acc,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.4f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.7f),CIwFVec2(Iw2DGetSurfaceWidth()*0.4f,Iw2DGetSurfaceWidth()*0.4f*0.3f));
+				Iw2DDrawImage(_control_acc,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.45f),CIwFVec2(Iw2DGetSurfaceWidth()*0.5f,Iw2DGetSurfaceWidth()*0.5f*0.3f));
+				Iw2DSetColour(0xff0000ff);
+				Iw2DDrawImage(_control_touch,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f),CIwFVec2(Iw2DGetSurfaceWidth()*0.5f,Iw2DGetSurfaceWidth()*0.5f*0.3f));
 			}
 			else
 			{
-				Iw2DSetColour(0xff0000ff);
-				Iw2DDrawImage(_control_acc,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.4f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.7f),CIwFVec2(Iw2DGetSurfaceWidth()*0.4f,Iw2DGetSurfaceWidth()*0.4f*0.3f));
 				Iw2DSetColour(0xffffffff);
-				Iw2DDrawImage(_control_touch,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.4f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.5f),CIwFVec2(Iw2DGetSurfaceWidth()*0.4f,Iw2DGetSurfaceWidth()*0.4f*0.3f));
+				Iw2DDrawImage(_control_touch,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f),CIwFVec2(Iw2DGetSurfaceWidth()*0.5f,Iw2DGetSurfaceWidth()*0.5f*0.3f));
+				Iw2DSetColour(0xff0000ff);
+				Iw2DDrawImage(_control_acc,CIwFVec2(Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2,(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.45f),CIwFVec2(Iw2DGetSurfaceWidth()*0.5f,Iw2DGetSurfaceWidth()*0.5f*0.3f));
 			}
 
 			if(x<0)
@@ -875,6 +888,8 @@ void CGame::main_Page_Update()
 
 			_store->ts = time_scale;
 			_store->tsb = time_scale_ball;
+
+			_store->a = acc;
 
 			for(i=0;i<3;i++)
 			{
@@ -959,6 +974,32 @@ void CGame::play_Page_Update()
 		trans=1;
 		j=m_tran;
 		s3eKeyboardClearState();
+	}
+	else if((over == 1) && ( s3ePointerGetState(S3E_POINTER_BUTTON_SELECT) & S3E_POINTER_STATE_DOWN ))
+	{
+		if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()/2 && s3ePointerGetY()>=Iw2DGetSurfaceHeight()*0.5f-Iw2DGetSurfaceWidth()*1.25f/2 && s3ePointerGetY()<=Iw2DGetSurfaceHeight()*0.5f+Iw2DGetSurfaceWidth()*1.25f/2)
+		{
+			resume=1;
+			if(score>highscore[0])
+			{
+				highscore[2] = highscore[1];
+				highscore[1] = highscore[0];
+				highscore[0] = score;
+			}
+			else if(score>highscore[1])
+			{
+				highscore[2] = highscore[1];
+				highscore[1] = score;
+			}
+			else if(score>highscore[2])
+			{
+				highscore[2] = score;
+			}
+			reset();
+			page=0;
+			trans=1;
+			j=m_tran;
+		}
 	}
 	if(over==0)
 	{
@@ -1153,6 +1194,33 @@ void CGame::play_Page_Update_Acc()
 		s3eAccelerometerStop();
 		s3eKeyboardClearState();
 	}
+	else if((over == 1) && ( s3ePointerGetState(S3E_POINTER_BUTTON_SELECT) & S3E_POINTER_STATE_DOWN ))
+	{
+		if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()/2 && s3ePointerGetY()>=Iw2DGetSurfaceHeight()*0.5f-Iw2DGetSurfaceWidth()*1.25f/2 && s3ePointerGetY()<=Iw2DGetSurfaceHeight()*0.5f+Iw2DGetSurfaceWidth()*1.25f/2)
+		{
+			resume=1;
+			if(score>highscore[0])
+			{
+				highscore[2] = highscore[1];
+				highscore[1] = highscore[0];
+				highscore[0] = score;
+			}
+			else if(score>highscore[1])
+			{
+				highscore[2] = highscore[1];
+				highscore[1] = score;
+			}
+			else if(score>highscore[2])
+			{
+				highscore[2] = score;
+			}
+			reset();
+			page=0;
+			trans=1;
+			j=m_tran;
+		}
+	}
+
 	if(over==0)
 	{
 		deltaX = s3eAccelerometerGetX() - accX;
@@ -1325,8 +1393,9 @@ void CGame::option_Win_Update()
 			}
 			else
 			{
-				option = 0;
+				option = -1;
 				click =0;
+				x = 0;
 				s3eKeyboardClearState();
 			}
 		}
@@ -1336,7 +1405,7 @@ void CGame::option_Win_Update()
 		{
 			if((s3ePointerGetX()>=5&&s3ePointerGetX()<=(float)Iw2DGetSurfaceWidth()*0.17f+5)&&s3ePointerGetY()>=(float)(Iw2DGetSurfaceHeight()-(float)Iw2DGetSurfaceWidth()*0.17f)-5&&s3ePointerGetY()<=(float)(Iw2DGetSurfaceHeight()-(float)Iw2DGetSurfaceWidth()*0.17f)+(float)Iw2DGetSurfaceWidth()*0.17f)
 			{
-				option = 0;
+				option = -1;
 				click=0;
 			}
 		}
@@ -1344,7 +1413,7 @@ void CGame::option_Win_Update()
 		{
 			if((s3ePointerGetX()>=(float)(Iw2DGetSurfaceWidth()-(float)Iw2DGetSurfaceWidth()*0.17f-5)&&s3ePointerGetX()<=(float)(Iw2DGetSurfaceWidth()-(float)Iw2DGetSurfaceWidth()*0.17f-5)+(float)Iw2DGetSurfaceWidth()*0.17f)&&(s3ePointerGetY()>=(float)(Iw2DGetSurfaceHeight()-(float)Iw2DGetSurfaceWidth()*0.17f-5)&&s3ePointerGetY()<=(float)(Iw2DGetSurfaceHeight()-(float)Iw2DGetSurfaceWidth()*0.17f-5)+(float)Iw2DGetSurfaceWidth()*0.17f))
 			{
-				option = 0;
+				option = -1;
 				click=0;
 			}
 		}
@@ -1352,11 +1421,12 @@ void CGame::option_Win_Update()
 		{
 			if(s3ePointerGetX()>=(float)Iw2DGetSurfaceWidth()/2-(float)(Iw2DGetSurfaceWidth()*0.3f)/2 && s3ePointerGetX()<=(float)Iw2DGetSurfaceWidth()/2+(float)(Iw2DGetSurfaceWidth()*0.3f)/2 && s3ePointerGetY()>=(float)Iw2DGetSurfaceHeight()-(float)Iw2DGetSurfaceWidth()*(0.3f/3.19f)-20 && s3ePointerGetY()<=(float)Iw2DGetSurfaceHeight()-(float)Iw2DGetSurfaceWidth()*(0.3f/3.19f)-20+(float)Iw2DGetSurfaceWidth()*(0.3f/3.19f))
 			{
-				option = 0;
+				option = -1;
 				click=0;
 			}
 		}
 	}
+	
 	switch (option)
 	{
 		case 1:
@@ -1372,7 +1442,7 @@ void CGame::option_Win_Update()
 					option = 5;
 					x = -30;
 				}
-				else if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.7f/2 && s3ePointerGetY()>=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f && s3ePointerGetY()<=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f+Iw2DGetSurfaceWidth()*0.7f*0.3f)
+				else if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.5f/2 && s3ePointerGetY()>=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f && s3ePointerGetY()<=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f+Iw2DGetSurfaceWidth()*0.5f*0.3f)
 				{
 					x = -30;
 					option = 6;
@@ -1382,6 +1452,39 @@ void CGame::option_Win_Update()
 		case 2:
 			if( s3ePointerGetState(S3E_POINTER_BUTTON_SELECT) & S3E_POINTER_STATE_DOWN )
 			{
+				if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.7f/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.7f/2 && s3ePointerGetY()>=Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*0.7f*1.38f/2 && s3ePointerGetY()<=Iw2DGetSurfaceHeight()*0.55f+Iw2DGetSurfaceWidth()*0.7f*1.38f/2)
+				{
+					if(isslide == false)
+					{
+						isslide = true;
+						slide_add = (float)s3ePointerGetY();
+					}
+					else
+					{
+						if(slide_add - s3ePointerGetY() < 0)
+						{
+							if(slide>0)
+							{
+								slide += (slide_add - s3ePointerGetY())*0.05f;
+								if(slide<0)
+								{
+									slide = 0;
+								}
+							}
+						}
+						else if(slide_add - s3ePointerGetY() > 0)
+						{
+							if(slide < 579)
+							{
+								slide += (slide_add - s3ePointerGetY())*0.05f;
+								if(slide>579)
+								{
+									slide = 579;
+								}
+							}
+						}
+					}
+				}
 				if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.7f/2-Iw2DGetSurfaceWidth()*0.17f*0.35f && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.7f/2-Iw2DGetSurfaceWidth()*0.17f*0.35f+Iw2DGetSurfaceWidth()*0.17f && s3ePointerGetY()>=Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2+Iw2DGetSurfaceWidth()*0.17f*0.2f && s3ePointerGetY()<=Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2+Iw2DGetSurfaceWidth()*0.17f*0.2f+Iw2DGetSurfaceWidth()*0.17f)
 				{
 					switch (s3eDeviceGetInt(S3E_DEVICE_OS))
@@ -1398,6 +1501,10 @@ void CGame::option_Win_Update()
 					}
 					option = 0;
 				}
+			}
+			else
+			{
+				isslide = false;
 			}
 			break;
 		case 4:
@@ -1505,14 +1612,14 @@ void CGame::option_Win_Update()
 		case 6:
 			if( (s3ePointerGetState(S3E_POINTER_BUTTON_SELECT) & S3E_POINTER_STATE_DOWN) && x>=0)
 			{
-				if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.4f/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.4f/2 && s3ePointerGetY()>=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.5f && s3ePointerGetY()<=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.5f+Iw2DGetSurfaceWidth()*0.4f*0.3)
+				if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.5f/2 && s3ePointerGetY()>=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f && s3ePointerGetY()<=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.65f+Iw2DGetSurfaceWidth()*0.5f*0.3)
 				{
 					if(acc != 0)
 					{
 						acc = 0;
 					}
 				}
-				else if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.4f/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.4f/2 && s3ePointerGetY()>=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.7f && s3ePointerGetY()<=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.7f+Iw2DGetSurfaceWidth()*0.4f*0.3)
+				else if(s3ePointerGetX()>=Iw2DGetSurfaceWidth()*0.5f-Iw2DGetSurfaceWidth()*0.5f/2 && s3ePointerGetX()<=Iw2DGetSurfaceWidth()*0.5f+Iw2DGetSurfaceWidth()*0.5f/2 && s3ePointerGetY()>=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.45f && s3ePointerGetY()<=(Iw2DGetSurfaceHeight()*0.55f-Iw2DGetSurfaceWidth()*1.25f/2)+(Iw2DGetSurfaceWidth()*1.25f)*0.45f+Iw2DGetSurfaceWidth()*0.5f*0.3)
 				{
 					if(acc != 1)
 					{
